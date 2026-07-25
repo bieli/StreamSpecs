@@ -4,6 +4,18 @@ Real-time **streaming data quality validator** for Apache Kafka, written in **Sc
 
 Validates events *on the stream* (before they land in a warehouse), routes failures to a Dead Letter Queue, and raises stateful alerts (Dead Man's Switch + rolling average).
 
+## Quick start (simulation - no Kafka)
+
+Requires **JDK 17+** and **sbt**.
+
+```bash
+# if your default Java is older than 17:
+./scripts/with-jdk17.sh sbt run
+
+# or simply:
+sbt run
+```
+
 ## CI (GitHub Actions)
 
 On every push / PR to `main` (or `master`):
