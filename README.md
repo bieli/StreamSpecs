@@ -24,7 +24,14 @@ sbt fmtCheck    # check only
 
 ## Stack
 
-- Scala 3.3 · Cats Effect 3 · FS2 3 · fs2-kafka · Circe · PureConfig · Prometheus · MUnit
+- Scala 3.3
+- Cats Effect 3
+- FS2 3
+- fs2-kafka
+- Circe
+- PureConfig
+- Prometheus
+- MUnit
 
 ## License
 
