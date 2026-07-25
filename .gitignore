@@ -1,6 +1,22 @@
-*.class
-*.tasty
+target/
+project/target/
+project/project/
+.bsp/
+.metals/
+.bloop/
+.idea/
+*.iml
+.vscode/
+.DS_Store
 *.log
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+.jvmopts
+metals.sbt
+.scala-build/
+out/
+dist/
+*.class
+*.jar
+!lib/*.jar
+.history
+.cache
+.coursier/
