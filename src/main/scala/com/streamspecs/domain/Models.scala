@@ -36,5 +36,31 @@ enum ValidationOutcome:
 /** Side-channel alerts raised by stateful / windowed checks. */
 enum StatefulAlert:
   case TemporalAnomaly(reason: String, metricKey: String, idleForMs: Long)
+  case RollingAverageAnomaly(
+      currentAverage: Double,
+      threshold: Double,
+      metricKey: String,
+      windowSize: Int
+  )
+  case DuplicateIdAnomaly(eventId: String, metricKey: String)
   case VolumeSpikeAnomaly(countInWindow: Int, maxAllowed: Int, metricKey: String, windowMs: Long)
+  case PriceDeviationAnomaly(
+      price: Double,
+      baselineAverage: Double,
+      deviationPercent: Double,
+      maxAllowedPercent: Double,
+      metricKey: String
+  )
+  case OutOfOrderAnomaly(
+      eventTimestamp: Long,
+      lastSeenTimestamp: Long,
+      metricKey: String
+  )
+  case TimeRollingAverageAnomaly(
+      currentAverage: Double,
+      threshold: Double,
+      metricKey: String,
+      windowMs: Long,
+      sampleCount: Int
+  )
 end StatefulAlert
