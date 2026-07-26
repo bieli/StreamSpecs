@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: streamspecs
+    static_configs:
+      - targets: ["host.docker.internal:9464"]
+        labels:
+          app: stream-specs
+          env: local
+    # On Linux Docker without host.docker.internal, use host gateway:
+    # targets: ["172.17.0.1:9464"]
+    metrics_path: /metrics
+    scrape_timeout: 3s
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
