@@ -36,4 +36,5 @@ enum ValidationOutcome:
 /** Side-channel alerts raised by stateful / windowed checks. */
 enum StatefulAlert:
   case TemporalAnomaly(reason: String, metricKey: String, idleForMs: Long)
+  case VolumeSpikeAnomaly(countInWindow: Int, maxAllowed: Int, metricKey: String, windowMs: Long)
 end StatefulAlert

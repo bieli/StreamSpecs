@@ -80,7 +80,7 @@ object CliOptions:
   end parse
 
   def helpText: String =
-    """StreamSpecs — streaming data-quality validator
+    """StreamSpecs - streaming data-quality validator
       |
       |Usage:
       |  stream-specs [options]

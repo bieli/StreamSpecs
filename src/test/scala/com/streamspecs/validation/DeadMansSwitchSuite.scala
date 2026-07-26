@@ -43,7 +43,7 @@ class DeadMansSwitchSuite extends CatsEffectSuite:
     yield assertEquals(alerts, Nil)
   }
 
-  test("watchdog is edge-triggered — one alert per silence gap") {
+  test("watchdog is edge-triggered - one alert per silence gap") {
     for
       now <- IO.realTime.map(_.toMillis)
       ref <- Ref.of[IO, StreamHeartbeat](StreamHeartbeat(now - 10_000))

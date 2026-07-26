@@ -6,7 +6,7 @@ import scala.util.Try
 
 /** ISO 4217 alphabetic currency codes (banking / insurance standard).
   *
-  * Uses the JDK registry (`java.util.Currency`) so the set tracks the runtime's ISO 4217 table —
+  * Uses the JDK registry (`java.util.Currency`) so the set tracks the runtime's ISO 4217 table -
   * three-letter codes such as PLN, EUR, USD, GBP, CHF, JPY.
   *
   * Non-ISO tickers (e.g. BTC, ETH) are rejected.
