@@ -102,7 +102,6 @@ final class EventValidator(
         case Some(_) =>
           None
       end match
-
   /** Optional business allow-list applied after ISO 4217. */
   private def checkAllowedCurrency(
       raw: String,

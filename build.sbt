@@ -21,8 +21,8 @@ lazy val root = (project in file("."))
       "io.prometheus"          % "simpleclient"              % "0.16.0",
       "io.prometheus"          % "simpleclient_hotspot"      % "0.16.0",
       "io.prometheus"          % "simpleclient_httpserver"   % "0.16.0",
-      "org.scalameta"         %% "munit"                     % "1.0.2"  % Test,
-      "org.typelevel"         %% "munit-cats-effect"         % "2.0.0"  % Test
+      "org.scalameta"         %% "munit"                     % "1.0.2" % Test,
+      "org.typelevel"         %% "munit-cats-effect"         % "2.0.0" % Test
     ),
     scalacOptions ++= Seq(
       "-deprecation",
