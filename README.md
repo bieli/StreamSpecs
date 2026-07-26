@@ -126,6 +126,15 @@ curl -s http://127.0.0.1:9464/metrics | grep streamspecs_
 # Prometheus UI: http://localhost:9090
 ```
 
+#### Direct link to Grafana dashboard:
+
+[http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s](http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s)
+
+##### How it's looks like?
+
+![Grafana Dashboard v1](assets/StreamSpec-grafana-dashboard.v1.png)
+
+
 HOCON + env placeholders:
 
 ```hocon

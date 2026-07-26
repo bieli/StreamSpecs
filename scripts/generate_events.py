@@ -3,6 +3,8 @@
 
 Requires: pip install kafka-python
 Usage:    python scripts/generate_events.py [--bootstrap localhost:9092] [--count 50]
+
+Compatible with Python 3.8+.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import argparse
 import json
 import random
 import time
+from typing import Any, Dict, Union
 
 try:
     from kafka import KafkaProducer
@@ -31,6 +34,14 @@ DIRTY = [
     "{this is not json",  # parse failure
 ]
 
+Payload = Union[Dict[str, Any], str]
+
+
+def encode_payload(payload: Payload) -> bytes:
+    if isinstance(payload, str):
+        return payload.encode("utf-8")
+    return json.dumps(payload).encode("utf-8")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Produce sample events for StreamSpecs")
@@ -40,22 +51,29 @@ def main() -> None:
     parser.add_argument("--interval", type=float, default=0.4)
     args = parser.parse_args()
 
-    producer = KafkaProducer(
-        bootstrap_servers=args.bootstrap,
-        value_serializer=lambda v: v.encode("utf-8") if isinstance(v, str) else json.dumps(v).encode("utf-8"),
-    )
+    # Pass raw bytes — avoids kafka-python 3.x Serializer deprecation warnings
+    producer = KafkaProducer(bootstrap_servers=args.bootstrap)
 
-    print(f"Producing {args.count} events to {args.topic} @ {args.bootstrap}")
+    print("Producing {} events to {} @ {}".format(args.count, args.topic, args.bootstrap))
     for i in range(args.count):
         # ~70% clean, ~30% dirty
         if random.random() < 0.7:
-            payload = random.choice(CLEAN) | {"id": f"ORD-{1000 + i}", "price": round(random.uniform(20, 150), 2)}
+            base = random.choice(CLEAN)
+            payload = dict(
+                base,
+                id="ORD-{}".format(1000 + i),
+                price=round(random.uniform(20, 150), 2),
+            )
         else:
             payload = random.choice(DIRTY)
 
-        producer.send(args.topic, value=payload)
-        kind = "CLEAN" if isinstance(payload, dict) and payload.get("id") and payload.get("price", 0) > 0 else "DIRTY"
-        print(f"  [{kind}] {payload}")
+        producer.send(args.topic, value=encode_payload(payload))
+        kind = (
+            "CLEAN"
+            if isinstance(payload, dict) and payload.get("id") and payload.get("price", 0) > 0
+            else "DIRTY"
+        )
+        print("  [{}] {}".format(kind, payload))
         time.sleep(args.interval)
 
     producer.flush()
