@@ -29,7 +29,7 @@ jobs:
         uses: sbt/setup-sbt@v1
 
       - name: Check formatting
-        run: sbt -batch scalafmtCheckAll
+        run: sbt -batch "scalafmtCheckAll; scalafmtSbtCheck"
 
   compile:
     name: Compile
@@ -48,8 +48,8 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@v1
 
-      - name: Compile (main + test, warnings as errors)
-        run: sbt -batch "set scalacOptions += \"-Werror\"" Test/compile
+      - name: Compile core + examples (warnings as errors)
+        run: sbt -batch "set ThisBuild / scalacOptions += \"-Werror\"" "core/Test/compile" "examples/compile"
 
   test:
     name: Test
@@ -69,5 +69,5 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@v1
 
-      - name: Run tests
-        run: sbt -batch test
+      - name: Run core tests
+        run: sbt -batch core/test

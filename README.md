@@ -1,259 +1,132 @@
 # StreamSpecs
 
-Real-time **streaming data quality validator** for Apache Kafka, written in **Scala 3** with **Cats Effect 3** and **FS2** with Grafana dashboard.
+**Universal streaming data-quality library** for Scala 3 / Cats Effect / FS2.
 
-Validates events *on the stream* (before they land in a warehouse), routes failures to a Dead Letter Queue, and raises stateful alerts (Dead Man's Switch + rolling average).
+You define the domain type and rules. The library handles Kafka I/O, stateful windows, DLQ routing, and Prometheus metrics — without knowing your fields (`price`, `temperature`, …).
 
 ```
-                  ┌──────────────┐
-                  │  Kafka Topic │     incoming steaming events
-                  └──────┬───────┘
-                         │
-                         ▼
-             ┌───────────────────────┐
-             │   StreamSpecs Engine  │ <--- HOCON rules
-             │   (FS2 + Cats Effect) │
-             └───────────┬───────────┘
-                         │
-        ┌────────────────┴────────────────┐
-        │ Valid / Pass-with-warn      DLQ │
-        ▼                                 ▼
-┌──────────────┐                  ┌──────────────┐
-│ valid-events │                  │  dlq-events  │
-└──────────────┘                  └──────────────┘
+  Your domain event T
+        + DataQualityValidator[T]   (you implement)
+        + EventCodec[T]             (you implement / Circe)
+                 │
+                 ▼
+        ┌─────────────────────┐
+        │  stream-specs-core  │  FS2 pipeline · windows · metrics
+        └──────────┬──────────┘
+                   │
+        valid topic / DLQ / alerts
 ```
 
-## Features (MVP)
+## Modules
 
-| Capability | Description |
-|---|---|
-| Declarative HOCON rules | Per error-code `metric-key` + `send-to-dlq` |
-| Stateless validation | Required fields, numeric bounds, email regex, JSON parse |
-| Allowed currency | Optional product allow-list (subset of ISO 4217) |
-| ISO 4217 currency | Default: 3-letter alphabetic codes via JDK (`PLN`, `EUR`, …) |
-| Freshness / lag | `eventTimestamp` vs wall clock (`max-lag`) |
-| DLQ routing | Failed events wrapped with reason / error code / timestamp |
-| Pass-with-warning | Soft failures still forward to the valid topic but bump a metric |
-| Dead Man's Switch | Alert when the stream goes silent longer than `max-idle-duration` |
-| Volume spike | Alert when too many events arrive in a sliding time window |
-| Duplicate ID | Detect repeated ids within last N events (Kafka retries) |
-| Rolling average | Count-based window over `price`; alert below threshold |
-| Time-based rolling window | Mean over last `window-duration` (event-time or processing-time) |
-| Price deviation | Spike vs rolling baseline (e.g. +150%) |
-| Out-of-order timestamps | `eventTimestamp` going backwards |
-| Simulation mode | Full pipeline demo **without** a Kafka broker |
-| Prometheus metrics | `/metrics` scrape endpoint (default `:9464`) |
-| Grafana dashboard | Provisioned template under `monitoring/grafana/` |
-
-## Quick start (simulation - no Kafka)
-
-Requires **JDK 17+** and **sbt**.
-
-```bash
-# if your default Java is older than 17:
-./scripts/with-jdk17.sh sbt run
-
-# or simply:
-sbt run
-```
-
-You should see valid / DLQ / warning routing, a rolling-average alert, then a Dead Man's Switch alert during the intentional silence gap.
-
-## Quick start (with Kafka)
-
-```bash
-docker compose up -d
-# wait ~10s for topics
-
-# in application.conf set: simulation-mode = false
-# or override:
-sbt -Dstream-validator.simulation-mode=false run
-
-# in another terminal:
-pip install kafka-python
-python scripts/generate_events.py
-```
-
-## Metrics (Prometheus + Grafana)
-
-StreamSpecs exposes Prometheus counters on **`:9464/metrics`** when the metrics HTTP server is enabled.
-
-### Enable / disable metrics server
-
-Precedence (highest wins): **CLI → environment → `application.conf`**
-
-| Layer | Example |
-|---|---|
-| CLI | `sbt "run -- --no-metrics-server"` |
-| CLI | `sbt "run -- --metrics-server --metrics-port 9100"` |
-| ENV | `STREAMSPECS_METRICS_SERVER=false sbt run` |
-| HOCON | `metrics.prometheus.enabled = false` |
-
-```bash
-# help
-sbt "run -- --help"
-
-# run without background scrape server (counters can still use console/silent backend)
-sbt "run -- --no-metrics-server"
-
-# custom port
-sbt "run -- --metrics-server --metrics-port 9100"
-
-# packaged binary
-./stream-specs --no-metrics-server
-./stream-specs --metrics-backend silent
-```
-
-| Metric | Labels | Meaning |
+| Module | Artifact | Role |
 |---|---|---|
-| `streamspecs_events_total` | `result`=`valid`\|`dlq`\|`pass_with_warning` | Routing outcome |
-| `streamspecs_rule_violations_total` | `category`, `rule` | Stateless rule hits |
-| `streamspecs_stateful_alerts_total` | `alert_type` | Windowed / temporal alerts |
-| JVM (`jvm_*`, `process_*`) | - | Optional via `jvm-metrics = true` |
+| `core` | `stream-specs-core` | Universal library |
+| `examples` | `stream-specs-examples` | IoT + finance demos |
+
+## Quick start (IoT example)
 
 ```bash
-# start Prometheus + Grafana (+ Kafka)
-docker compose up -d prometheus grafana
-
-# run the validator (simulation still scrapable)
-./scripts/with-jdk17.sh sbt run
-
-# scrape locally
-curl -s http://127.0.0.1:9464/metrics | grep streamspecs_
-
-# Grafana: http://localhost:3000  (admin / streamspecs)
-# Dashboard: "StreamSpecs Data Quality" (folder StreamSpecs)
-# Prometheus UI: http://localhost:9090
+./scripts/with-jdk17.sh sbt "examples/run"
+# or with metrics flags:
+./scripts/with-jdk17.sh sbt "examples/run -- --no-metrics-server"
 ```
 
-#### Direct link to Grafana dashboard:
+## Implement your domain
 
-[http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s](http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s)
+```scala
+import com.streamspecs.core.*
 
-##### How it's looks like?
+final case class TemperatureSensorEvent(
+  deviceId: String,
+  temperature: Double,
+  humidity: Double,
+  timestamp: Long
+)
 
-![Grafana Dashboard v1](assets/StreamSpec-grafana-dashboard.v1.png)
+object TemperatureSensorEvent:
+  given EventCodec[TemperatureSensorEvent] = EventCodec.fromCirce // needs circe Codec
 
-
-HOCON + env placeholders:
-
-```hocon
-metrics {
-  backend = "prometheus"          # or STREAMSPECS_METRICS_BACKEND
-  echo-to-console = true
-  prometheus {
-    enabled = true                # or STREAMSPECS_METRICS_SERVER
-    host = "0.0.0.0"              # or STREAMSPECS_METRICS_HOST
-    port = 9464                   # or STREAMSPECS_METRICS_PORT
-    jvm-metrics = true
-  }
-}
+  given DataQualityValidator[TemperatureSensorEvent] with
+    def extractId(e: TemperatureSensorEvent) = Some(e.deviceId)
+    def extractTimestamp(e: TemperatureSensorEvent) = Some(e.timestamp)
+    def extractMetricValue(e: TemperatureSensorEvent, name: String) =
+      name match
+        case "temperature" => Some(e.temperature)
+        case "humidity"    => Some(e.humidity)
+        case _             => None
+    def statelessRules(e: TemperatureSensorEvent) = Map(
+      "temperature-bound" -> (
+        if e.temperature >= -50 && e.temperature <= 100 then RuleVerdict.Valid
+        else RuleVerdict.Invalid(s"out of range: ${e.temperature}")
+      )
+    )
 ```
 
-Dashboard template: `monitoring/grafana/provisioning/dashboards/json/streamspecs-data-quality.json`
+Wire the engine:
 
-## Rule configuration
+```scala
+val engine = new ValidationEngine[TemperatureSensorEvent](config, metrics)
+val (transform, watchdog) = engine.build(heartbeat, volumeState)
+```
 
-`src/main/resources/application.conf`:
+## HOCON (engine only)
+
+Rule **logic** is in your `DataQualityValidator`. Config only sets routing and windows:
 
 ```hocon
-stream-validator {
+stream-specs {
   rules {
-    missing-id {
-      metric-key = "alerts.errors.missing_id"
+    temperature-bound {
+      metric-key = "alerts.errors.temperature_bound"
       send-to-dlq = true
     }
-    invalid-email-format {
-      metric-key = "alerts.warnings.invalid_email"
-      send-to-dlq = false   # metric only - event still forwarded
+    humidity-bound {
+      metric-key = "alerts.warnings.humidity_bound"
+      send-to-dlq = false   # warning → forward + metric
     }
   }
-
   stateful-rules {
-    heartbeat-check {
-      metric-key = "alerts.stateful.data_loss_detected"
-      max-idle-duration = 3s
-    }
-    rolling-price-check {
+    rolling-average-check {
+      metric-name = "temperature"   # passed to extractMetricValue
+      window-size-events = 5
+      min-allowed-average = 15.0
       metric-key = "alerts.stateful.low_rolling_average"
-      field = "price"
-      window-size-events = 3
-      min-allowed-average = 50.0
     }
   }
 }
 ```
 
-## Project layout
+## Built-in stateful checks
 
+| Check | Uses |
+|---|---|
+| Dead Man's Switch | event arrival time |
+| Volume spike | event rate |
+| Duplicate ID | `extractId` |
+| Out-of-order | `extractTimestamp` |
+| Rolling average (count) | `extractMetricValue(metric-name)` |
+| Time-rolling average | `extractMetricValue` + timestamp |
+| Metric deviation | `extractMetricValue(metric-name)` |
+
+## Metrics (Prometheus)
+
+Default scrape: `http://localhost:9464/metrics`
+
+```bash
+docker compose up -d prometheus grafana
+sbt "examples/run -- --metrics-server"
+# Grafana: http://localhost:3000  (admin / streamspecs)
 ```
-src/main/scala/com/streamspecs/
-  StreamSpecsApp.scala          # entrypoint
-  config/Config.scala           # PureConfig models
-  domain/Models.scala           # events + ValidationOutcome + StatefulAlert
-  validation/
-    EventValidator.scala        # stateless (+ ISO 4217, freshness, allow-list)
-    Iso4217.scala               # ISO 4217 alphabetic currency codes
-    DuplicateIdValidator.scala
-    VolumeSpikeDetector.scala
-    RollingWindow.scala
-    RollingAverageValidator.scala
-    TimeRollingWindow.scala
-    TimeRollingAverageValidator.scala
-    PriceDeviationValidator.scala
-    OutOfOrderValidator.scala
-    DeadMansSwitch.scala
-    StatefulPipe.scala          # compose stateful pipes
-  pipeline/ValidationPipeline.scala
-  kafka/KafkaIO.scala
-  metrics/
-    Metrics.scala
-    PrometheusRegistry.scala
-    PrometheusServer.scala
-```
+
+CLI / env: `--no-metrics-server`, `STREAMSPECS_METRICS_SERVER`, … (see `--help`).
 
 ## Tests
 
 ```bash
-sbt test
+sbt core/test
+sbt examples/compile
 ```
-
-## CI (GitHub Actions)
-
-On every push / PR to `main` (or `master`):
-
-| Job | Command |
-|---|---|
-| Format | `sbt scalafmtCheckAll` |
-| Compile | `sbt Test/compile` (with `-Werror`) |
-| Test | `sbt test` |
-
-Locally mirror CI with:
-
-```bash
-sbt ci          # fmtCheck + compile + test
-sbt fmt         # rewrite sources with scalafmt
-sbt fmtCheck    # check only
-```
-
-## Stack
-
-- Scala 3.3
-- Cats Effect 3
-- FS2 3
-- fs2-kafka
-- Circe
-- PureConfig
-- Prometheus
-- MUnit
-
-## Roadmap
-
-- [ ] Move codebase to more generic Scala library, where I need to put Kafka parameters and queues names, internally library do data quality job (we need to unify/independent /make generic/ domain data model in impl. - this need to be in "domain" user' code  package, not in our generic library)
-- [ ] OpenTelemetry traces / exemplars
-- [ ] Slack / webhook alerts from DLQ + stateful anomalies
-- [ ] YAML rule packs + `include` composition
-- [ ] Throughput benchmarks (events/s)
 
 ## License
 
