@@ -93,7 +93,7 @@ stream-specs {
     }
     humidity-bound {
       metric-key = "alerts.warnings.humidity_bound"
-      send-to-dlq = false   # warning → forward + metric
+      send-to-dlq = false   # warning -> forward + metric
     }
   }
   stateful-rules {
@@ -128,6 +128,15 @@ docker compose up -d prometheus grafana
 sbt "examples/run -- --metrics-server"
 # Grafana: http://localhost:3000  (admin / streamspecs)
 ```
+
+#### Direct link to Grafana dashboard:
+
+[http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s](http://localhost:3000/d/streamspecs-dq/streamspecs-data-quality?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s)
+
+##### How it's looks like?
+
+![Grafana Dashboard v1](assets/StreamSpec-grafana-dashboard.v1.png)
+
 
 CLI / env: `--no-metrics-server`, `STREAMSPECS_METRICS_SERVER`, … (see `--help`).
 

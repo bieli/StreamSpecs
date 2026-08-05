@@ -23,7 +23,7 @@ trait DataQualityValidator[T]:
     */
   def extractMetricValue(event: T, metricName: String): Option[Double]
 
-  /** Stateless rule name → verdict map evaluated for every event. */
+  /** Stateless rule name -> verdict map evaluated for every event. */
   def statelessRules(event: T): Map[String, RuleVerdict]
 end DataQualityValidator
 
