@@ -2,39 +2,65 @@ ThisBuild / version      := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "3.3.4"
 ThisBuild / organization := "com.streamspecs"
 
+val catsEffectV = "3.5.7"
+val fs2V        = "3.11.0"
+val fs2KafkaV   = "3.5.1"
+val circeV      = "0.14.10"
+val pureconfigV = "0.17.8"
+val munitV      = "1.0.2"
+val munitCEV    = "2.0.0"
+val prometheusV = "0.16.0"
+val logbackV    = "1.5.12"
+
+lazy val commonSettings = Seq(
+  scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Wunused:all"),
+  testFrameworks += new TestFramework("munit.Framework")
+)
+
 lazy val root = (project in file("."))
+  .aggregate(core, examples)
+  .settings(
+    name           := "stream-specs",
+    publish / skip := true
+  )
+
+lazy val core = (project in file("core"))
+  .settings(
+    commonSettings,
+    name := "stream-specs-core",
+    libraryDependencies ++= Seq(
+      "org.typelevel"         %% "cats-effect"               % catsEffectV,
+      "co.fs2"                %% "fs2-core"                  % fs2V,
+      "co.fs2"                %% "fs2-io"                    % fs2V,
+      "com.github.fd4s"       %% "fs2-kafka"                 % fs2KafkaV,
+      "io.circe"              %% "circe-core"                % circeV,
+      "io.circe"              %% "circe-generic"             % circeV,
+      "io.circe"              %% "circe-parser"              % circeV,
+      "com.github.pureconfig" %% "pureconfig-core"           % pureconfigV,
+      "com.github.pureconfig" %% "pureconfig-generic-scala3" % pureconfigV,
+      "io.prometheus"          % "simpleclient"              % prometheusV,
+      "io.prometheus"          % "simpleclient_hotspot"      % prometheusV,
+      "io.prometheus"          % "simpleclient_httpserver"   % prometheusV,
+      "ch.qos.logback"         % "logback-classic"           % logbackV % Runtime,
+      "org.scalameta"         %% "munit"                     % munitV   % Test,
+      "org.typelevel"         %% "munit-cats-effect"         % munitCEV % Test
+    )
+  )
+
+lazy val examples = (project in file("examples"))
+  .dependsOn(core)
   .enablePlugins(JavaAppPackaging)
   .settings(
-    name := "stream-specs",
-    libraryDependencies ++= Seq(
-      "org.typelevel"         %% "cats-effect"               % "3.5.7",
-      "co.fs2"                %% "fs2-core"                  % "3.11.0",
-      "co.fs2"                %% "fs2-io"                    % "3.11.0",
-      "com.github.fd4s"       %% "fs2-kafka"                 % "3.5.1",
-      "io.circe"              %% "circe-core"                % "0.14.10",
-      "io.circe"              %% "circe-generic"             % "0.14.10",
-      "io.circe"              %% "circe-parser"              % "0.14.10",
-      "com.github.pureconfig" %% "pureconfig-core"           % "0.17.8",
-      "com.github.pureconfig" %% "pureconfig-generic-scala3" % "0.17.8",
-      "org.typelevel"         %% "log4cats-slf4j"            % "2.7.0",
-      "ch.qos.logback"         % "logback-classic"           % "1.5.12",
-      "io.prometheus"          % "simpleclient"              % "0.16.0",
-      "io.prometheus"          % "simpleclient_hotspot"      % "0.16.0",
-      "io.prometheus"          % "simpleclient_httpserver"   % "0.16.0",
-      "org.scalameta"         %% "munit"                     % "1.0.2" % Test,
-      "org.typelevel"         %% "munit-cats-effect"         % "2.0.0" % Test
-    ),
-    scalacOptions ++= Seq(
-      "-deprecation",
-      "-feature",
-      "-unchecked",
-      "-Wunused:all"
-    ),
-    Compile / mainClass  := Some("com.streamspecs.StreamSpecsApp"),
+    commonSettings,
+    name                 := "stream-specs-examples",
+    publish / skip       := true,
+    Compile / mainClass  := Some("com.streamspecs.examples.iot.IoTStreamSpecsApp"),
     Compile / run / fork := true,
-    testFrameworks += new TestFramework("munit.Framework")
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % logbackV
+    )
   )
 
 addCommandAlias("fmt", "scalafmtAll; scalafmtSbt")
 addCommandAlias("fmtCheck", "scalafmtCheckAll; scalafmtSbtCheck")
-addCommandAlias("ci", "fmtCheck; Test/compile; test")
+addCommandAlias("ci", "fmtCheck; core/test; examples/compile")
