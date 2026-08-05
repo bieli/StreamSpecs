@@ -73,12 +73,12 @@ class StatelessEvaluatorSuite extends FunSuite:
     val pass = evaluator.evaluate("a,10,1")
     assertEquals(evaluator.metricKeysFor(pass), List("events.valid"))
 
-    val warn = evaluator.evaluate("X1,10,1")
+    val warn     = evaluator.evaluate("X1,10,1")
     val warnKeys = evaluator.metricKeysFor(warn)
     assert(warnKeys.contains("alerts.warnings.soft_id"))
     assert(warnKeys.contains("events.pass_with_warning"))
 
-    val reject = evaluator.evaluate("a,-1,1")
+    val reject     = evaluator.evaluate("a,-1,1")
     val rejectKeys = evaluator.metricKeysFor(reject)
     assert(rejectKeys.contains("alerts.errors.positive_value"))
     assert(rejectKeys.contains("events.dlq"))

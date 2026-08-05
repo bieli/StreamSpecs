@@ -16,6 +16,7 @@ object SampleEvent:
         case _ => Left("bad csv")
     def encode(event: SampleEvent): String =
       s"${event.id},${event.value},${event.ts}"
+  end given
 
   given DataQualityValidator[SampleEvent] with
     def extractId(event: SampleEvent): Option[String] =
@@ -42,6 +43,7 @@ object SampleEvent:
           else RuleVerdict.Valid
         )
       )
+  end given
 
   def testConfig(
       rules: Map[String, RuleAction] = Map(

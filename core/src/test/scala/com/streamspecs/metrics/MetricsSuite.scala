@@ -6,10 +6,10 @@ class MetricsSuite extends CatsEffectSuite:
 
   test("silent metrics accumulate snapshot counters") {
     for
-      m <- Metrics.silent
-      _ <- m.increment("events.valid")
-      _ <- m.increment("events.valid")
-      _ <- m.increment("events.dlq")
+      m    <- Metrics.silent
+      _    <- m.increment("events.valid")
+      _    <- m.increment("events.valid")
+      _    <- m.increment("events.dlq")
       snap <- m.snapshot
     yield
       assertEquals(snap.get("events.valid"), Some(2L))
@@ -19,9 +19,9 @@ class MetricsSuite extends CatsEffectSuite:
   test("prometheus metrics keep local snapshot in sync") {
     val registry = PrometheusRegistry.create(jvmMetrics = false)
     for
-      m <- Metrics.prometheus(registry)
-      _ <- m.increment("events.valid")
-      _ <- m.increment("alerts.warnings.soft_id")
+      m    <- Metrics.prometheus(registry)
+      _    <- m.increment("events.valid")
+      _    <- m.increment("alerts.warnings.soft_id")
       snap <- m.snapshot
     yield
       assertEquals(snap.get("events.valid"), Some(1L))

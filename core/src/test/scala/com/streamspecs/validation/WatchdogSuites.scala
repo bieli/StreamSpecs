@@ -40,6 +40,7 @@ class WatchdogSuites extends CatsEffectSuite:
         case StatefulAlert.VolumeSpikeAnomaly(count, 2, _, _) =>
           assert(count > 2)
         case other => fail(s"$other")
+    end for
   }
 
   test("dead man's switch fires when idle beyond threshold") {
@@ -56,6 +57,7 @@ class WatchdogSuites extends CatsEffectSuite:
     yield
       assertEquals(alerts.length, 1)
       assert(alerts.head.isInstanceOf[StatefulAlert.TemporalAnomaly])
+    end for
   }
 
   test("dead man's switch does not re-fire until traffic resumes then idles again") {
@@ -88,5 +90,6 @@ class WatchdogSuites extends CatsEffectSuite:
       assertEquals(first.length, 1)
       assertEquals(quiet, Nil)
       assertEquals(second.length, 1)
+    end for
   }
 end WatchdogSuites

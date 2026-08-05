@@ -13,7 +13,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   import SampleEvent.{pass, reject, warn}
 
   test("duplicate id rejects when sendToDlq=true") {
-    val rule = DuplicateIdRule("m", 10, sendToDlq = true)
+    val rule   = DuplicateIdRule("m", 10, sendToDlq = true)
     val events = Stream(pass("A", 1), pass("B", 2), pass("A", 3))
     DuplicateIdValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -26,7 +26,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("duplicate id warns when sendToDlq=false") {
-    val rule = DuplicateIdRule("m", 10, sendToDlq = false)
+    val rule   = DuplicateIdRule("m", 10, sendToDlq = false)
     val events = Stream(pass("A", 1), pass("A", 2))
     DuplicateIdValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -38,7 +38,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("duplicate id falls out of window and can reappear") {
-    val rule = DuplicateIdRule("m", 2, sendToDlq = true)
+    val rule   = DuplicateIdRule("m", 2, sendToDlq = true)
     val events = Stream(pass("A", 1), pass("B", 2), pass("C", 3), pass("A", 4))
     DuplicateIdValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -48,7 +48,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("duplicate id ignores Reject outcomes") {
-    val rule = DuplicateIdRule("m", 10, sendToDlq = true)
+    val rule   = DuplicateIdRule("m", 10, sendToDlq = true)
     val events = Stream(reject(), pass("X", 1), pass("X", 2))
     DuplicateIdValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -58,7 +58,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("duplicate id tracks ids from PassWithWarnings") {
-    val rule = DuplicateIdRule("m", 10, sendToDlq = true)
+    val rule   = DuplicateIdRule("m", 10, sendToDlq = true)
     val events = Stream(warn("A", 1), pass("A", 2))
     DuplicateIdValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -72,16 +72,20 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
     val events   = Stream(pass("1", 1, 1000), pass("2", 1, 500))
 
     for
-      warnRes <- OutOfOrderValidator.stage[SampleEvent](warnRule)(events.map(_ -> Nil)).compile.toList
-      dlqRes  <- OutOfOrderValidator.stage[SampleEvent](dlqRule)(events.map(_ -> Nil)).compile.toList
+      warnRes <- OutOfOrderValidator
+        .stage[SampleEvent](warnRule)(events.map(_ -> Nil))
+        .compile
+        .toList
+      dlqRes <- OutOfOrderValidator.stage[SampleEvent](dlqRule)(events.map(_ -> Nil)).compile.toList
     yield
       assert(warnRes(1)._1.isInstanceOf[EngineOutcome.PassWithWarnings[?]])
       assert(dlqRes(1)._1.isInstanceOf[EngineOutcome.Reject[?]])
       assert(warnRes(1)._2.exists(_.isInstanceOf[StatefulAlert.OutOfOrderAnomaly]))
+    end for
   }
 
   test("equal timestamps are not out-of-order") {
-    val rule = OutOfOrderRule("m", sendToDlq = true)
+    val rule   = OutOfOrderRule("m", sendToDlq = true)
     val events = Stream(pass("1", 1, 100), pass("2", 1, 100), pass("3", 1, 200))
     OutOfOrderValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results => assert(results.forall(_._2.isEmpty))
@@ -89,7 +93,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("out-of-order does not advance watermark") {
-    val rule = OutOfOrderRule("m", sendToDlq = false)
+    val rule   = OutOfOrderRule("m", sendToDlq = false)
     val events = Stream(pass("1", 1, 1000), pass("2", 1, 500), pass("3", 1, 1500))
     OutOfOrderValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -100,19 +104,19 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("rolling average alerts below threshold when window full") {
-    val rule = RollingAverageRule("m", "value", 3, 50.0)
+    val rule   = RollingAverageRule("m", "value", 3, 50.0)
     val events = Stream(pass("1", 100), pass("2", 10), pass("3", 5))
     RollingAverageValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
         assert(results.last._2.exists {
           case StatefulAlert.RollingAverageAnomaly("value", avg, 50.0, _, 3) => avg < 50.0
-          case _ => false
+          case _                                                             => false
         })
     }
   }
 
   test("rolling average stays quiet above threshold") {
-    val rule = RollingAverageRule("m", "value", 3, 10.0)
+    val rule   = RollingAverageRule("m", "value", 3, 10.0)
     val events = Stream(pass("1", 100), pass("2", 80), pass("3", 60))
     RollingAverageValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results => assert(results.forall(_._2.isEmpty))
@@ -120,7 +124,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("rolling average ignores unknown metricName") {
-    val rule = RollingAverageRule("m", "temperature", 2, 50.0)
+    val rule   = RollingAverageRule("m", "temperature", 2, 50.0)
     val events = Stream(pass("1", 1), pass("2", 1))
     RollingAverageValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results => assert(results.forall(_._2.isEmpty))
@@ -128,7 +132,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("metric deviation fires on spike vs baseline") {
-    val rule = MetricDeviationRule("m", "value", 3, maxDeviationPercent = 100.0)
+    val rule   = MetricDeviationRule("m", "value", 3, maxDeviationPercent = 100.0)
     val events = Stream(pass("1", 10), pass("2", 10), pass("3", 10), pass("4", 50))
     MetricDeviationValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -137,7 +141,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("metric deviation does not fire while filling window") {
-    val rule = MetricDeviationRule("m", "value", 5, maxDeviationPercent = 10.0)
+    val rule   = MetricDeviationRule("m", "value", 5, maxDeviationPercent = 10.0)
     val events = Stream(pass("1", 10), pass("2", 1000))
     MetricDeviationValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results => assert(results.forall(_._2.isEmpty))
@@ -153,7 +157,7 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
       minSamples = 2,
       useEventTimestamp = true
     )
-    val t0 = 1_000_000L
+    val t0     = 1_000_000L
     val events = Stream(pass("1", 100, t0), pass("2", 10, t0 + 100), pass("3", 5, t0 + 200))
     TimeRollingAverageValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results =>
@@ -162,8 +166,9 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
   }
 
   test("time-rolling average respects minSamples") {
-    val rule = TimeRollingAverageRule("m", "value", 1.second, 50.0, minSamples = 5, useEventTimestamp = true)
-    val t0 = 2_000_000L
+    val rule =
+      TimeRollingAverageRule("m", "value", 1.second, 50.0, minSamples = 5, useEventTimestamp = true)
+    val t0     = 2_000_000L
     val events = Stream(pass("1", 1, t0), pass("2", 1, t0 + 10))
     TimeRollingAverageValidator.stage[SampleEvent](rule)(events.map(_ -> Nil)).compile.toList.map {
       results => assert(results.forall(_._2.isEmpty))
@@ -174,7 +179,10 @@ class StatefulValidatorsSuite extends CatsEffectSuite:
     val dup = DuplicateIdRule("dup", 10, sendToDlq = false)
     val ooo = OutOfOrderRule("ooo", sendToDlq = false)
     val pipe = StatefulPipe.sequence(
-      List(DuplicateIdValidator.stage[SampleEvent](dup), OutOfOrderValidator.stage[SampleEvent](ooo))
+      List(
+        DuplicateIdValidator.stage[SampleEvent](dup),
+        OutOfOrderValidator.stage[SampleEvent](ooo)
+      )
     )
     val events = Stream(pass("A", 1, 1000), pass("B", 1, 2000), pass("A", 1, 1500))
     pipe(events).compile.toList.map { results =>
