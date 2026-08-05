@@ -51,7 +51,7 @@ def main() -> None:
     parser.add_argument("--interval", type=float, default=0.4)
     args = parser.parse_args()
 
-    # Pass raw bytes — avoids kafka-python 3.x Serializer deprecation warnings
+    # Pass raw bytes - avoids kafka-python 3.x Serializer deprecation warnings
     producer = KafkaProducer(bootstrap_servers=args.bootstrap)
 
     print("Producing {} events to {} @ {}".format(args.count, args.topic, args.bootstrap))

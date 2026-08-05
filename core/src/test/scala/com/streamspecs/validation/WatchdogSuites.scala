@@ -72,7 +72,7 @@ class WatchdogSuites extends CatsEffectSuite:
         .compile
         .toList
       _ <- DeadMansSwitch.markAlive(ref)
-      // still alive briefly — no second alert while fresh
+      // still alive briefly - no second alert while fresh
       quiet <- DeadMansSwitch
         .watchdog(ref, rule, pollInterval = 40.millis)
         .interruptAfter(60.millis)

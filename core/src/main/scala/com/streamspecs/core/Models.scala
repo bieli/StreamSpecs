@@ -46,8 +46,8 @@ enum EngineOutcome[T]:
   /** All rules passed (may still carry stateful alerts separately). */
   case Pass(event: T)
 
-  /** Soft failures only — forward event, emit metrics / warnings. */
+  /** Soft failures only - forward event, emit metrics / warnings. */
   case PassWithWarnings(event: T, issues: List[RuleIssue])
 
-  /** Hard failure — route to DLQ (payload may be raw JSON if decode failed). */
+  /** Hard failure - route to DLQ (payload may be raw JSON if decode failed). */
   case Reject(rawPayload: String, issues: List[RuleIssue], event: Option[T])

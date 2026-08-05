@@ -9,7 +9,7 @@ enum RuleVerdict:
 /** User-defined contract that binds an arbitrary domain type `T` to StreamSpecs.
   *
   * Implement this for your own events (IoT, finance, logistics, …). The engine never inspects your
-  * fields directly — it only calls these methods.
+  * fields directly - it only calls these methods.
   */
 trait DataQualityValidator[T]:
   /** Stable event / device / entity identifier (used by duplicate-id checks). */

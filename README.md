@@ -2,7 +2,7 @@
 
 **Universal streaming data-quality library** for Scala 3 / Cats Effect / FS2.
 
-You define the domain type and rules. The library handles Kafka I/O, stateful windows, DLQ routing, and Prometheus metrics — without knowing your fields (`price`, `temperature`, …).
+You define the domain type and rules. The library handles Kafka I/O, stateful windows, DLQ routing, and Prometheus metrics - without knowing your fields (`price`, `temperature`, …).
 
 ```mermaid
 graph TD

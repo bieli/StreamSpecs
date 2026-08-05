@@ -41,7 +41,7 @@ class StatelessEvaluatorSuite extends FunSuite:
       case other => fail(s"$other")
   }
 
-  test("hard Invalid wins over soft Warning — still Reject") {
+  test("hard Invalid wins over soft Warning - still Reject") {
     evaluator.evaluate("X1,-1,1") match
       case EngineOutcome.Reject(_, issues, _) =>
         assert(issues.exists(_.rule == "positive-value"))

@@ -5,7 +5,7 @@ import com.streamspecs.util.Iso4217
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
 
-/** Optional finance domain example — shows ISO 4217 usage outside the library core. */
+/** Optional finance domain example - shows ISO 4217 usage outside the library core. */
 final case class TransactionEvent(
     id: Option[String],
     price: Double,

@@ -61,7 +61,7 @@ object CliOptions:
   end parse
 
   def helpText: String =
-    """StreamSpecs — universal streaming data-quality engine
+    """StreamSpecs - universal streaming data-quality engine
       |
       |Usage:
       |  <your-app> [options]

@@ -56,7 +56,7 @@ object IoTStreamSpecsApp extends IOApp:
         _ <-
           if config.metrics.prometheus.enabled && config.simulationMode then
             IO.println(
-              s"Metrics server up for 5s — curl http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
+              s"Metrics server up for 5s - curl http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
             ) *> IO.sleep(5.seconds)
           else IO.unit
       yield ()

@@ -92,7 +92,7 @@ final case class MetricsConfig(
     prometheus: PrometheusConfig
 ) derives ConfigReader
 
-/** Engine configuration — domain-agnostic. Rule *logic* lives in the user's
+/** Engine configuration - domain-agnostic. Rule *logic* lives in the user's
   * [[com.streamspecs.core.DataQualityValidator]]; this config only controls routing, windows, Kafka
   * and metrics.
   */

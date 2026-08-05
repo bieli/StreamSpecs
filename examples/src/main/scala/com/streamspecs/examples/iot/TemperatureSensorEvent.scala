@@ -4,7 +4,7 @@ import com.streamspecs.core.*
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
 
-/** Example IoT domain event — no price / currency fields. */
+/** Example IoT domain event - no price / currency fields. */
 final case class TemperatureSensorEvent(
     deviceId: String,
     temperature: Double,
