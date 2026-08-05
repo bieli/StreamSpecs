@@ -5,6 +5,7 @@ ThisBuild / organization := "com.streamspecs"
 val catsEffectV = "3.5.7"
 val fs2V        = "3.11.0"
 val fs2KafkaV   = "3.5.1"
+val jnatsV      = "2.20.5"
 val circeV      = "0.14.10"
 val pureconfigV = "0.17.8"
 val munitV      = "1.0.2"
@@ -33,6 +34,7 @@ lazy val core = (project in file("core"))
       "co.fs2"                %% "fs2-core"                  % fs2V,
       "co.fs2"                %% "fs2-io"                    % fs2V,
       "com.github.fd4s"       %% "fs2-kafka"                 % fs2KafkaV,
+      "io.nats"                % "jnats"                     % jnatsV,
       "io.circe"              %% "circe-core"                % circeV,
       "io.circe"              %% "circe-generic"             % circeV,
       "io.circe"              %% "circe-parser"              % circeV,

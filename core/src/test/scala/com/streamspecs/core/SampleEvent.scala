@@ -57,12 +57,17 @@ object SampleEvent:
     EngineConfig(
       rules = rules,
       statefulRules = StatefulRules(None, None, None, None, None, None, None),
-      kafka = KafkaConfig(
-        "localhost:9092",
-        "g",
-        "c",
-        KafkaTopics("in", "ok", "dlq"),
-        "earliest"
+      messaging = MessagingConfig(
+        backend = "kafka",
+        destinations = Destinations("in", "ok", "dlq"),
+        kafka = KafkaConfig("localhost:9092", "g", "c", "earliest"),
+        nats = NatsConfig(
+          servers = "nats://localhost:4222",
+          stream = "TEST",
+          durable = "test-durable",
+          createStreamIfMissing = true,
+          deliverPolicy = "all"
+        )
       ),
       metrics = MetricsConfig(
         "silent",

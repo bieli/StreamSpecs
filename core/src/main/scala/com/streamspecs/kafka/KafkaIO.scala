@@ -24,17 +24,20 @@ object KafkaIO:
       .withBootstrapServers(cfg.bootstrapServers)
       .withClientId(s"${cfg.clientId}-producer")
 
-  def consume(cfg: KafkaConfig): Stream[IO, CommittableConsumerRecord[IO, String, String]] =
-    KafkaConsumer.stream(consumerSettings(cfg)).subscribeTo(cfg.topics.incoming).records
+  def consume(
+      cfg: KafkaConfig,
+      incomingTopic: String
+  ): Stream[IO, CommittableConsumerRecord[IO, String, String]] =
+    KafkaConsumer.stream(consumerSettings(cfg)).subscribeTo(incomingTopic).records
 
   def produceAndCommit[T](
       producer: KafkaProducer[IO, String, String],
       key: Option[String],
       routed: RoutedEvent[T],
-      offset: CommittableOffset[IO]
+      ack: IO[Unit]
   ): IO[Unit] =
     val record = ProducerRecord(routed.targetTopic, key.getOrElse(""), routed.payload)
-    producer.produce(ProducerRecords.one(record)).flatten.void *> offset.commit
+    producer.produce(ProducerRecords.one(record)).flatten.void *> ack
 
   def producerResource(cfg: KafkaConfig): Resource[IO, KafkaProducer[IO, String, String]] =
     KafkaProducer.resource(producerSettings(cfg))

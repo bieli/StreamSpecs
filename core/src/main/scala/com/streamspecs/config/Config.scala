@@ -65,7 +65,8 @@ final case class StatefulRules(
     outOfOrderCheck: Option[OutOfOrderRule]
 ) derives ConfigReader
 
-final case class KafkaTopics(
+/** Shared destination names (Kafka topics or NATS JetStream subjects). */
+final case class Destinations(
     incoming: String,
     valid: String,
     dlq: String
@@ -75,8 +76,24 @@ final case class KafkaConfig(
     bootstrapServers: String,
     groupId: String,
     clientId: String,
-    topics: KafkaTopics,
     autoOffsetReset: String
+) derives ConfigReader
+
+final case class NatsConfig(
+    servers: String,
+    stream: String,
+    durable: String,
+    createStreamIfMissing: Boolean,
+    deliverPolicy: String
+) derives ConfigReader
+
+/** Service-bus selection: `backend` is `kafka` or `nats` (aliases: `nats-jetstream`, `jetstream`).
+  */
+final case class MessagingConfig(
+    backend: String,
+    destinations: Destinations,
+    kafka: KafkaConfig,
+    nats: NatsConfig
 ) derives ConfigReader
 
 final case class PrometheusConfig(
@@ -92,14 +109,14 @@ final case class MetricsConfig(
     prometheus: PrometheusConfig
 ) derives ConfigReader
 
-/** Engine configuration - domain-agnostic. Rule *logic* lives in the user's
-  * [[com.streamspecs.core.DataQualityValidator]]; this config only controls routing, windows, Kafka
-  * and metrics.
+/** Engine configuration — domain-agnostic. Rule *logic* lives in the user's
+  * [[com.streamspecs.core.DataQualityValidator]]; this config only controls routing, windows,
+  * messaging and metrics.
   */
 final case class EngineConfig(
     rules: Map[String, RuleAction],
     statefulRules: StatefulRules,
-    kafka: KafkaConfig,
+    messaging: MessagingConfig,
     metrics: MetricsConfig,
     simulationMode: Boolean,
     defaultSendToDlq: Boolean

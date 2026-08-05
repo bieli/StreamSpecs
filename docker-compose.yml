@@ -36,6 +36,38 @@ services:
         echo "Topics ready."
     network_mode: service:kafka
 
+  nats:
+    image: nats:2.10.24-alpine
+    container_name: streamspecs-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  nats-init:
+    image: natsio/nats-box:0.14.5
+    depends_on:
+      - nats
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for NATS..."
+        sleep 3
+        nats --server nats://nats:4222 stream add SENSORS \
+          --subjects "incoming-sensors,valid-sensors,sensors-dlq" \
+          --storage file \
+          --retention limits \
+          --defaults \
+          || true
+        nats --server nats://nats:4222 stream add ORDERS \
+          --subjects "incoming-orders,valid-orders,orders-dlq" \
+          --storage file \
+          --retention limits \
+          --defaults \
+          || true
+        nats --server nats://nats:4222 stream ls
+        echo "NATS JetStream streams ready."
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: streamspecs-prometheus
