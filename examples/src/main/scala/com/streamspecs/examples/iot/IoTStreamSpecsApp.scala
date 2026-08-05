@@ -1,10 +1,10 @@
 package com.streamspecs.examples.iot
 
 import cats.effect.{ExitCode, IO, IOApp, Ref}
+import com.streamspecs.bus.ServiceBuses
 import com.streamspecs.config.{AppConfig, CliOptions, EngineConfig, MetricsConfig}
 import com.streamspecs.core.StatefulAlert
 import com.streamspecs.engine.{RoutedEvent, ValidationEngine}
-import com.streamspecs.kafka.KafkaIO
 import com.streamspecs.metrics.{Metrics, PrometheusRegistry, PrometheusServer}
 import com.streamspecs.validation.{StreamHeartbeat, VolumeSpikeDetector}
 import fs2.Stream
@@ -33,15 +33,16 @@ object IoTStreamSpecsApp extends IOApp:
     PrometheusServer.resource(config.metrics).use { case (registry, httpServer) =>
       for
         _ <- IO.println("StreamSpecs IoT example starting...")
-        _ <- IO.println(s"  simulation-mode = ${config.simulationMode}")
-        _ <- IO.println(s"  domain          = TemperatureSensorEvent")
-        _ <- IO.println(s"  metrics backend = ${config.metrics.backend}")
+        _ <- IO.println(s"  simulation-mode    = ${config.simulationMode}")
+        _ <- IO.println(s"  messaging.backend  = ${config.messaging.backend}")
+        _ <- IO.println(s"  domain             = TemperatureSensorEvent")
+        _ <- IO.println(s"  metrics backend    = ${config.metrics.backend}")
         _ <- httpServer match
           case Some(_) =>
             IO.println(
-              s"  metrics server  = ON  http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
+              s"  metrics server     = ON  http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
             )
-          case None => IO.println("  metrics server  = OFF")
+          case None => IO.println("  metrics server     = OFF")
         metrics <- makeMetrics(config.metrics, registry)
         engine = new ValidationEngine[TemperatureSensorEvent](config, metrics)
         now         <- IO.realTime.map(_.toMillis)
@@ -50,13 +51,13 @@ object IoTStreamSpecsApp extends IOApp:
         (transform, watchdog) = engine.build(heartbeat, volumeState)
         _ <-
           if config.simulationMode then runSimulation(transform, watchdog)
-          else runKafka(config, transform, watchdog)
+          else runServiceBus(config, transform, watchdog)
         snap <- metrics.snapshot
         _    <- IO.println(s"Final metrics snapshot: $snap")
         _ <-
           if config.metrics.prometheus.enabled && config.simulationMode then
             IO.println(
-              s"Metrics server up for 5s - curl http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
+              s"Metrics server up for 5s — curl http://127.0.0.1:${config.metrics.prometheus.port}/metrics"
             ) *> IO.sleep(5.seconds)
           else IO.unit
       yield ()
@@ -92,28 +93,30 @@ object IoTStreamSpecsApp extends IOApp:
         )
 
     val data = transform(incoming).evalMap { routed =>
-      IO.println(s"  -> topic=${routed.targetTopic}  payload=${routed.payload.take(120)}")
+      IO.println(s"  -> dest=${routed.targetTopic}  payload=${routed.payload.take(120)}")
     }
 
-    IO.println("Running IoT simulation (no Kafka required)...") *>
+    IO.println("Running IoT simulation (no broker required)...") *>
       data.mergeHaltBoth(watchdog.drain).interruptAfter(14.seconds).compile.drain
   end runSimulation
 
-  private def runKafka(
+  private def runServiceBus(
       config: EngineConfig,
       transform: Stream[IO, String] => Stream[IO, RoutedEvent[TemperatureSensorEvent]],
       watchdog: Stream[IO, StatefulAlert]
   ): IO[Unit] =
-    KafkaIO.producerResource(config.kafka).use { producer =>
+    val dest = config.messaging.destinations
+    ServiceBuses.resource(config.messaging).use { bus =>
       val processed =
-        KafkaIO.consume(config.kafka).evalMap { cr =>
-          transform(Stream.emit(cr.record.value)).compile.toList.flatMap {
-            case routed :: _ =>
-              KafkaIO.produceAndCommit(producer, Option(cr.record.key), routed, cr.offset)
-            case Nil => cr.offset.commit
+        bus.consume.evalMap { msg =>
+          transform(Stream.emit(msg.payload)).compile.toList.flatMap {
+            case routed :: _ => bus.publishAndAck(msg, routed)
+            case Nil         => msg.ack
           }
         }
-      IO.println(s"Consuming ${config.kafka.topics.incoming} @ ${config.kafka.bootstrapServers}") *>
-        processed.mergeHaltBoth(watchdog.drain).compile.drain
+      IO.println(
+        s"Consuming ${dest.incoming} via messaging.backend=${config.messaging.backend}"
+      ) *> processed.mergeHaltBoth(watchdog.drain).compile.drain
     }
+  end runServiceBus
 end IoTStreamSpecsApp

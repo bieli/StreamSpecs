@@ -30,8 +30,8 @@ final class ValidationEngine[T](config: EngineConfig, metrics: Metrics[IO])(usin
       heartbeat: Ref[IO, StreamHeartbeat],
       volumeState: Ref[IO, VolumeSpikeDetector.State]
   ): (Stream[IO, String] => Stream[IO, RoutedEvent[T]], Stream[IO, StatefulAlert]) =
-    val validTopic = config.kafka.topics.valid
-    val dlqTopic   = config.kafka.topics.dlq
+    val validTopic = config.messaging.destinations.valid
+    val dlqTopic   = config.messaging.destinations.dlq
 
     val stateful: StatefulPipe.PipeLegacy[T] =
       StatefulPipe.sequence(

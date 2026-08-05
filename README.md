@@ -2,14 +2,14 @@
 
 **Universal streaming data-quality library** for Scala 3 / Cats Effect / FS2.
 
-You define the domain type and rules. The library handles Kafka I/O, stateful windows, DLQ routing, and Prometheus metrics - without knowing your fields (`price`, `temperature`, …).
+You define the domain type and rules. The library handles **Kafka or NATS JetStream** I/O, stateful windows, DLQ routing, and Prometheus metrics — without knowing your fields (`price`, `temperature`, …).
 
 ```mermaid
 graph TD
     INPUT1["Your domain event T<br><small><b>DataQualityValidator[T]</b><br><br><i>(you implement)</i></small>"]
     INPUT2["<b>EventCodec[T]</b><br><small><i><br>(you implement / Circe)</i></small>"]
     CORE["<b>stream-specs-core engine</b><br><br><small><i>(FS2 pipeline / windows / metrics)</i></small>"]
-    OUTPUT1["<b>valid topic</b>"]
+    OUTPUT1["<b>valid destination</b>"]
     OUTPUT2["<b>DLQ</b>"]
     OUTPUT3["<b>alerts</b>"]
     
@@ -31,7 +31,7 @@ graph TD
 
 | Module | Artifact | Role |
 |---|---|---|
-| `core` | `stream-specs-core` | Universal library |
+| `core` | `stream-specs-core` | Universal library (Kafka + NATS JetStream) |
 | `examples` | `stream-specs-examples` | IoT + finance demos |
 
 ## Quick start (IoT example)
@@ -40,6 +40,23 @@ graph TD
 ./scripts/with-jdk17.sh sbt "examples/run"
 # or with metrics flags:
 ./scripts/with-jdk17.sh sbt "examples/run -- --no-metrics-server"
+```
+
+### Live broker modes
+
+```bash
+# Kafka
+docker compose up -d kafka kafka-init
+# application.conf: messaging.backend = kafka, simulation-mode = false
+./scripts/with-jdk17.sh sbt "examples/run -- --messaging-backend=kafka"
+python scripts/generate_iot_events.py
+
+# NATS JetStream
+docker compose up -d nats nats-init
+# application.conf: messaging.backend = nats, simulation-mode = false
+./scripts/with-jdk17.sh sbt "examples/run -- --messaging-backend=nats"
+pip install nats-py
+python scripts/generate_iot_events_nats.py
 ```
 
 ## Implement your domain
@@ -82,10 +99,26 @@ val (transform, watchdog) = engine.build(heartbeat, volumeState)
 
 ## HOCON (engine only)
 
-Rule **logic** is in your `DataQualityValidator`. Config only sets routing and windows:
+Rule **logic** is in your `DataQualityValidator`. Config only sets routing, windows, and the service bus:
 
 ```hocon
 stream-specs {
+  messaging {
+    backend = "kafka"   # or "nats"
+    destinations {
+      incoming = "incoming-sensors"
+      valid = "valid-sensors"
+      dlq = "sensors-dlq"
+    }
+    kafka { bootstrap-servers = "localhost:9092" /* ... */ }
+    nats {
+      servers = "nats://localhost:4222"
+      stream = "SENSORS"
+      durable = "stream-specs-iot"
+      create-stream-if-missing = true
+      deliver-policy = "all"
+    }
+  }
   rules {
     temperature-bound {
       metric-key = "alerts.errors.temperature_bound"
@@ -106,6 +139,8 @@ stream-specs {
   }
 }
 ```
+
+CLI / env for messaging: `--messaging-backend=nats`, `STREAMSPECS_MESSAGING_BACKEND`.
 
 ## Built-in stateful checks
 

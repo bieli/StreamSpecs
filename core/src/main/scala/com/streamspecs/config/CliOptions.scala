@@ -1,19 +1,22 @@
 package com.streamspecs.config
 
-/** CLI overrides for the metrics HTTP scrape server and backend. */
+/** CLI overrides for metrics HTTP scrape server / backend and messaging backend. */
 final case class CliOptions(
     metricsServer: Option[Boolean] = None,
     metricsPort: Option[Int] = None,
     metricsHost: Option[String] = None,
     metricsBackend: Option[String] = None,
+    messagingBackend: Option[String] = None,
     help: Boolean = false,
     errors: List[String] = Nil
 ):
   def isValid: Boolean = errors.isEmpty
+end CliOptions
 
 object CliOptions:
 
-  private val Backends = Set("console", "silent", "prometheus")
+  private val MetricsBackends   = Set("console", "silent", "prometheus")
+  private val MessagingBackends = Set("kafka", "nats", "nats-jetstream", "jetstream")
 
   def parse(args: List[String]): CliOptions =
     @annotation.tailrec
@@ -44,27 +47,47 @@ object CliOptions:
           loop(tail, acc.copy(metricsHost = Some(value)))
         case "--metrics-backend" :: value :: tail =>
           val normalized = value.toLowerCase
-          if Backends.contains(normalized) then
+          if MetricsBackends.contains(normalized) then
             loop(tail, acc.copy(metricsBackend = Some(normalized)))
           else
             loop(
               tail,
               acc.copy(errors =
-                acc.errors :+ s"Invalid --metrics-backend '$value' (use: ${Backends.mkString("|")})"
+                acc.errors :+
+                  s"Invalid --metrics-backend '$value' (use: ${MetricsBackends.mkString("|")})"
               )
             )
+          end if
         case s"--metrics-backend=$value" :: tail =>
           loop("--metrics-backend" :: value :: tail, acc)
+        case "--messaging-backend" :: value :: tail =>
+          val normalized = value.toLowerCase
+          if MessagingBackends.contains(normalized) then
+            loop(tail, acc.copy(messagingBackend = Some(normalized)))
+          else
+            loop(
+              tail,
+              acc.copy(errors =
+                acc.errors :+
+                  s"Invalid --messaging-backend '$value' (use: kafka|nats)"
+              )
+            )
+          end if
+        case s"--messaging-backend=$value" :: tail =>
+          loop("--messaging-backend" :: value :: tail, acc)
         case unknown :: tail =>
           loop(tail, acc.copy(errors = acc.errors :+ s"Unknown argument: $unknown"))
     loop(args, CliOptions())
   end parse
 
   def helpText: String =
-    """StreamSpecs - universal streaming data-quality engine
+    """StreamSpecs — universal streaming data-quality engine
       |
       |Usage:
       |  <your-app> [options]
+      |
+      |Messaging (service bus):
+      |  --messaging-backend <name>     kafka | nats
       |
       |Metrics server (Prometheus scrape endpoint):
       |  --metrics-server[=true|false]  Enable/disable HTTP /metrics server
@@ -74,6 +97,7 @@ object CliOptions:
       |  --metrics-backend <name>       console | silent | prometheus
       |
       |Environment (overridden by CLI):
+      |  STREAMSPECS_MESSAGING_BACKEND,
       |  STREAMSPECS_METRICS_SERVER, STREAMSPECS_METRICS_PORT,
       |  STREAMSPECS_METRICS_HOST, STREAMSPECS_METRICS_BACKEND
       |
@@ -87,9 +111,13 @@ object CliOptions:
       case other                        => Left(s"Invalid boolean '$other' (expected true|false)")
 
   def applyTo(config: EngineConfig, cli: CliOptions): EngineConfig =
-    val m = config.metrics
-    val p = m.prometheus
+    val m   = config.metrics
+    val p   = m.prometheus
+    val bus = config.messaging
     config.copy(
+      messaging = bus.copy(
+        backend = cli.messagingBackend.getOrElse(bus.backend)
+      ),
       metrics = m.copy(
         backend = cli.metricsBackend.getOrElse(m.backend),
         prometheus = p.copy(

@@ -8,7 +8,12 @@ class CliOptionsSuite extends FunSuite:
     EngineConfig(
       rules = Map.empty,
       statefulRules = StatefulRules(None, None, None, None, None, None, None),
-      kafka = KafkaConfig("localhost:9092", "g", "c", KafkaTopics("i", "v", "d"), "earliest"),
+      messaging = MessagingConfig(
+        backend = "kafka",
+        destinations = Destinations("i", "v", "d"),
+        kafka = KafkaConfig("localhost:9092", "g", "c", "earliest"),
+        nats = NatsConfig("nats://localhost:4222", "S", "d", true, "all")
+      ),
       metrics = MetricsConfig(
         "prometheus",
         true,
@@ -54,6 +59,16 @@ class CliOptionsSuite extends FunSuite:
   test("--metrics-backend accepts known backends") {
     val cfg = CliOptions.applyTo(base, CliOptions.parse(List("--metrics-backend=silent")))
     assertEquals(cfg.metrics.backend, "silent")
+  }
+
+  test("--messaging-backend switches to nats") {
+    val cfg = CliOptions.applyTo(base, CliOptions.parse(List("--messaging-backend=nats")))
+    assertEquals(cfg.messaging.backend, "nats")
+  }
+
+  test("invalid --messaging-backend records error") {
+    val cli = CliOptions.parse(List("--messaging-backend", "rabbitmq"))
+    assert(!cli.isValid)
   }
 
   test("invalid --metrics-port records error") {

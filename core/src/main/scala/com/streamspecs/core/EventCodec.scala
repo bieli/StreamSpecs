@@ -1,6 +1,6 @@
 package com.streamspecs.core
 
-/** Decode / encode domain events from Kafka string payloads (typically JSON). */
+/** Decode / encode domain events from string payloads (typically JSON). */
 trait EventCodec[T]:
   def decode(raw: String): Either[String, T]
   def encode(event: T): String
