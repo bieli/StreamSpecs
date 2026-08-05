@@ -6,13 +6,15 @@ You define the domain type and rules. The library handles Kafka I/O, stateful wi
 
 ```mermaid
 graph TD
+    INPUT_TOPIC["<b>input stream/topic</b>"]
     INPUT1["Your domain event T<br><small><b>DataQualityValidator[T]</b><br><br><i>(you implement)</i></small>"]
     INPUT2["<b>EventCodec[T]</b><br><small><i><br>(you implement / Circe)</i></small>"]
     CORE["<b>stream-specs-core engine</b><br><br><small><i>(FS2 pipeline / windows / metrics)</i></small>"]
-    OUTPUT1["<b>valid topic</b>"]
+    OUTPUT1["<b>output valid topic</b>"]
     OUTPUT2["<b>DLQ</b>"]
     OUTPUT3["<b>alerts</b>"]
     
+    INPUT_TOPIC --> INPUT1
     INPUT1 --> INPUT2
     INPUT2 --> CORE
     CORE --> OUTPUT1
@@ -25,6 +27,7 @@ graph TD
     style OUTPUT3 fill:#c62828,stroke:#333,stroke-width:4px,color:#fff
     style INPUT1 fill:#fff,stroke:#333,stroke-width:1px,color:#000
     style INPUT2 fill:#fff,stroke:#333,stroke-width:1px,color:#000
+    style INPUT_TOPIC fill:#2e7d32,stroke:#333,stroke-width:4px,color:#fff
 ```
 
 ## Modules
