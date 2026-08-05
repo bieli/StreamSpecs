@@ -4,17 +4,27 @@
 
 You define the domain type and rules. The library handles Kafka I/O, stateful windows, DLQ routing, and Prometheus metrics — without knowing your fields (`price`, `temperature`, …).
 
-```
-  Your domain event T
-        + DataQualityValidator[T]   (you implement)
-        + EventCodec[T]             (you implement / Circe)
-                 │
-                 ▼
-        ┌─────────────────────┐
-        │  stream-specs-core  │  FS2 pipeline · windows · metrics
-        └──────────┬──────────┘
-                   │
-        valid topic / DLQ / alerts
+```mermaid
+graph TD
+    INPUT1["Your domain event T<br><small><b>DataQualityValidator[T]</b><br><br><i>(you implement)</i></small>"]
+    INPUT2["<b>EventCodec[T]</b><br><small><i><br>(you implement / Circe)</i></small>"]
+    CORE["<b>stream-specs-core engine</b><br><br><small><i>(FS2 pipeline / windows / metrics)</i></small>"]
+    OUTPUT1["<b>valid topic</b>"]
+    OUTPUT2["<b>DLQ</b>"]
+    OUTPUT3["<b>alerts</b>"]
+    
+    INPUT1 --> INPUT2
+    INPUT2 --> CORE
+    CORE --> OUTPUT1
+    CORE --> OUTPUT2
+    CORE --> OUTPUT3
+
+    style CORE fill:#707070,stroke:#333,stroke-width:4px,color:#fff
+    style OUTPUT1 fill:#2e7d32,stroke:#333,stroke-width:4px,color:#fff
+    style OUTPUT2 fill:#ef6c00,stroke:#333,stroke-width:4px,color:#fff
+    style OUTPUT3 fill:#c62828,stroke:#333,stroke-width:4px,color:#fff
+    style INPUT1 fill:#fff,stroke:#333,stroke-width:1px,color:#000
+    style INPUT2 fill:#fff,stroke:#333,stroke-width:1px,color:#000
 ```
 
 ## Modules
